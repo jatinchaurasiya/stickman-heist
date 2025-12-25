@@ -609,9 +609,12 @@ function init() {
 
 function update() {
     if (gameState.paused || gameState.state !== 'PLAYING') return;
-    if (gameState.shake > 0) gameState.shake *= 0.9;
+    // Disable shake completely to ensure smoothness
+    gameState.shake = 0;
 
-    if (stickman) stickman.applyStiffness();
+    // allow ragdoll to be loose (no stiffness) to prevent physics fighting/vibration
+    // if (stickman) stickman.applyStiffness(); 
+
     for (let p of points) p.update();
     for (let i = 0; i < STIFFNESS; i++) {
         for (let s of sticks) s.update();
