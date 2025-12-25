@@ -1,6 +1,6 @@
 /**
  * Stickman Heist - "The Digital Vault"
- * Phase 7: Optimization Fixes
+ * Phase 8/9: Scalable Levels & Save System
  */
 
 const canvas = document.getElementById('gameCanvas');
@@ -50,6 +50,7 @@ let stickman;
 let levelManager;
 let camera;
 let soundManager;
+let saveManager;
 let mouseX = 0;
 let mouseY = 0;
 
@@ -73,41 +74,46 @@ const SHOP_ITEMS = [
     { name: 'Red', color: '#f00', cost: 100 }
 ];
 
-// --- Level Data ---
-const LEVELS = [
-    // Level 1: Tutorial
-    [
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 1],
-        [1, 3, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3, 1],
-        [1, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 4, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    ],
-    // Level 2: The Tower
-    [
-        [1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 4, 0, 0, 0, 0, 0, 3, 1],
-        [1, 1, 1, 0, 1, 1, 1, 1, 1],
-        [1, 3, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 1, 5, 0, 5, 1, 0, 1],
-        [1, 0, 0, 0, 1, 0, 0, 0, 1],
-        [1, 0, 0, 2, 1, 2, 0, 0, 1],
-        [1, 1, 0, 0, 0, 0, 0, 1, 1],
-        [1, 0, 0, 1, 1, 1, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 5, 0, 0, 0, 5, 0, 1],
-        [1, 0, 0, 0, 1, 0, 0, 0, 1],
-        [1, 0, 2, 2, 2, 2, 2, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1]
-    ]
-];
+// --- Save System ---
+class SaveManager {
+    constructor() {
+        this.STORAGE_KEY = 'heistSaveData_v2';
+    }
+
+    load() {
+        const dataStr = localStorage.getItem(this.STORAGE_KEY);
+        if (dataStr) {
+            try {
+                const data = JSON.parse(dataStr);
+                gameState.loot = data.loot || 0;
+                gameState.unlockedColors = data.unlockedColors || ['#0ff'];
+                gameState.currentColor = data.currentColor || '#0ff';
+                console.log("Save loaded:", data);
+                return data.currentLevel || 0;
+            } catch (e) {
+                console.error("Save Corrupt", e);
+                return 0;
+            }
+        }
+        return 0;
+    }
+
+    save(levelIndex) {
+        const data = {
+            currentLevel: levelIndex,
+            loot: gameState.loot,
+            unlockedColors: gameState.unlockedColors,
+            currentColor: gameState.currentColor
+        };
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+        console.log("Game Saved", data);
+    }
+
+    reset() {
+        localStorage.removeItem(this.STORAGE_KEY);
+        location.reload();
+    }
+}
 
 // --- Audio System ---
 class SoundManager {
@@ -152,7 +158,7 @@ class SoundManager {
     playWin() { this.playTone(440, 'sine', 0.1); setTimeout(() => this.playTone(554, 'sine', 0.1), 100); setTimeout(() => this.playTone(659, 'sine', 0.4), 200); }
 }
 
-// --- Object Pooling (Particles) ---
+// --- Object Pooling ---
 const MAX_PARTICLES = 100;
 const particlePool = [];
 
@@ -188,39 +194,23 @@ class Particle {
         ctx.globalAlpha = 1.0;
     }
 }
-
-// Initialize Pool
 for (let i = 0; i < MAX_PARTICLES; i++) particlePool.push(new Particle());
 
 function createSparks(x, y, count = 5) {
     let spawned = 0;
     for (let p of particlePool) {
-        if (!p.active) {
-            p.activate(x, y, '#fff', 3);
-            spawned++;
-            if (spawned >= count) break;
-        }
+        if (!p.active) { p.activate(x, y, '#fff', 3); spawned++; if (spawned >= count) break; }
     }
 }
 
 function createExplosion(x, y, color) {
     let spawned = 0;
     for (let p of particlePool) {
-        if (!p.active) {
-            p.activate(x, y, color, 8);
-            spawned++;
-            if (spawned >= 30) break;
-        }
+        if (!p.active) { p.activate(x, y, color, 8); spawned++; if (spawned >= 30) break; }
     }
 }
-
-function updateParticles() {
-    for (let p of particlePool) p.update();
-}
-
-function drawParticles() {
-    for (let p of particlePool) p.draw();
-}
+function updateParticles() { for (let p of particlePool) p.update(); }
+function drawParticles() { for (let p of particlePool) p.draw(); }
 
 // --- Classes ---
 
@@ -231,10 +221,8 @@ class Camera {
         const target = stickman.points[2];
         const targetX = target.x - width / 2;
         const targetY = target.y - height / 2;
-        // Smooth Lerp
         this.x += (targetX - this.x) * 0.1;
         this.y += (targetY - this.y) * 0.1;
-
         if (levelManager) {
             this.x = Math.max(0, Math.min(this.x, levelManager.width - width));
             this.y = Math.max(0, Math.min(this.y, levelManager.height - height));
@@ -264,11 +252,12 @@ class Point {
         if (this.x > levelManager.width) { this.x = levelManager.width; this.oldx = this.x + vx * BOUNCE; collided = true; }
         else if (this.x < 0) { this.x = 0; this.oldx = this.x + vx * BOUNCE; collided = true; }
         if (this.y > levelManager.height) { this.y = levelManager.height; this.oldy = this.y + vy * BOUNCE; collided = true; }
-        else if (this.y < 0) { this.y = 0; this.oldy = this.y + vy * BOUNCE; collided = true; } // Floor collision
+        else if (this.y < 0) { this.y = 0; this.oldy = this.y + vy * BOUNCE; collided = true; }
 
         if (collided) {
             const speed = Math.sqrt(vx * vx + vy * vy);
-            if (speed > 5) { createSparks(this.x, this.y); gameState.shake = 5; }
+            // Increased threshold from 5 to 15 to prevent constant shaking when sliding
+            if (speed > 15) { createSparks(this.x, this.y); gameState.shake = 3; }
         }
         const tile = levelManager.getTileAt(this.x, this.y);
         if (tile === TILE_LASER && !stickman.dead) stickman.die();
@@ -394,15 +383,19 @@ class Stickman {
 }
 
 class LevelManager {
-    constructor() { this.levelIndex = 0; this.tiles = []; this.tileSize = 60; this.width = 0; this.height = 0; }
+    constructor() { this.levelIndex = 0; this.tiles = []; this.tileSize = 60; this.width = 0; this.height = 0; this.levels = window.LEVELS_DATA || []; }
     loadLevel(index) {
-        if (index >= LEVELS.length) { index = 0; console.log("Game Loop!"); }
+        if (index >= this.levels.length) { index = 0; console.log("Game Loop!"); }
         this.levelIndex = index;
-        this.tiles = LEVELS[index].map(row => [...row]);
+        const levelData = this.levels[index];
+        this.tiles = levelData.grid.map(row => [...row]);
         this.rows = this.tiles.length; this.cols = this.tiles[0].length;
         this.calculateDimensions();
-        this.spawnPlayer();
-        // Reset Particle Pool
+        // Use Start Pos Config
+        const spawnCol = levelData.start ? levelData.start.col : 2;
+        const spawnRow = levelData.start ? levelData.start.row : 2;
+        this.spawnPlayer(spawnCol, spawnRow);
+
         for (let p of particlePool) p.active = false;
         gameState.shake = 0; gameState.startTime = Date.now(); gameState.state = 'PLAYING';
     }
@@ -411,8 +404,8 @@ class LevelManager {
         else this.tileSize = width / 12;
         this.width = this.cols * this.tileSize; this.height = this.rows * this.tileSize;
     }
-    spawnPlayer() {
-        const spawnX = 2 * this.tileSize; const spawnY = 2 * this.tileSize;
+    spawnPlayer(c, r) {
+        const spawnX = c * this.tileSize; const spawnY = r * this.tileSize;
         points.length = 0; sticks.length = 0;
         stickman = new Stickman(spawnX, spawnY);
     }
@@ -426,6 +419,7 @@ class LevelManager {
         if (this.tiles[row][col] === TILE_LOOT) {
             this.tiles[row][col] = TILE_EMPTY; gameState.loot++;
             updateUI(); createSparks(x, y, 10); soundManager.playLoot();
+            saveManager.save(this.levelIndex); // Auto Save
         }
     }
     castRay(x0, y0, x1, y1) {
@@ -533,7 +527,9 @@ function triggerSlowMotion() {
 
 function levelComplete() {
     if (gameState.state === 'WIN') return;
-    gameState.state = 'WIN'; soundManager.playWin(); levelCompleteScreen.style.display = 'flex';
+    gameState.state = 'WIN'; soundManager.playWin();
+    saveManager.save(levelManager.levelIndex + 1); // Save progress
+    levelCompleteScreen.style.display = 'flex';
 }
 
 function updateUI() {
@@ -569,6 +565,7 @@ window.handleShopAction = (color) => {
     else if (gameState.loot >= item.cost) {
         gameState.loot -= item.cost; gameState.unlockedColors.push(color); gameState.currentColor = color; soundManager.playLoot();
     }
+    saveManager.save(levelManager.levelIndex);
     updateUI(); renderShop();
 };
 function renderShop() {
@@ -587,16 +584,25 @@ function renderShop() {
 shopBtn.addEventListener('click', () => { if (gameState.state !== 'PLAYING') return; gameState.paused = true; shopModal.style.display = 'block'; });
 closeShopBtn.addEventListener('click', () => { gameState.paused = false; shopModal.style.display = 'none'; });
 
-startBtn.addEventListener('click', () => { soundManager.init(); startScreen.style.display = 'none'; gameState.paused = false; levelManager.loadLevel(0); });
+startBtn.addEventListener('click', () => {
+    soundManager.init();
+    const savedLevel = saveManager.load();
+    startScreen.style.display = 'none';
+    gameState.paused = false;
+    levelManager.loadLevel(savedLevel);
+});
 retryBtn.addEventListener('click', () => { gameOverScreen.style.display = 'none'; levelManager.loadLevel(levelManager.levelIndex); gameState.paused = false; });
 nextLevelBtn.addEventListener('click', () => { levelCompleteScreen.style.display = 'none'; levelManager.loadLevel(levelManager.levelIndex + 1); gameState.paused = false; });
 
 // --- Game Loop (Fixed Timestep) ---
 
 function init() {
+    saveManager = new SaveManager();
     soundManager = new SoundManager();
     levelManager = new LevelManager();
     camera = new Camera();
+
+    // Check save data for initial UI logic if needed, but Start Click will load it.
     renderShop();
     requestAnimationFrame(loop);
 }
@@ -605,10 +611,6 @@ function update() {
     if (gameState.paused || gameState.state !== 'PLAYING') return;
     if (gameState.shake > 0) gameState.shake *= 0.9;
 
-    // Slow Motion Effect handled by simulation time step accumulation in loop? 
-    // No, standard way is to reduce accumulator consumption or steps. 
-    // Here we will just run the physics.
-
     if (stickman) stickman.applyStiffness();
     for (let p of points) p.update();
     for (let i = 0; i < STIFFNESS; i++) {
@@ -616,7 +618,7 @@ function update() {
         for (let p of points) p.constrain();
     }
     updateParticles();
-    camera.update();
+    // Camera update moved to render loop for smoothness
 }
 
 let lastTime = 0;
@@ -627,14 +629,17 @@ function loop(timestamp) {
     const deltaTime = timestamp - lastTime;
     lastTime = timestamp;
 
-    // Cap deltaTime to avoid spiral of death
     if (deltaTime > 100) accumulator += 100;
-    else accumulator += deltaTime * gameState.timeScale; // Time Scale applied here
+    else accumulator += deltaTime * gameState.timeScale;
 
     while (accumulator >= FIXED_TIME_STEP) {
         update();
         accumulator -= FIXED_TIME_STEP;
     }
+
+    // Smooth Camera Update (Every Render Frame)
+    // We update camera here to interpolate smoothly between physics steps
+    if (camera) camera.update();
 
     // Draw
     ctx.clearRect(0, 0, width, height);
