@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,20 +9,124 @@
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #050505; /* Deep black for neon contrast */
+            background-color: #050505;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            font-family: 'Courier New', Courier, monospace;
+            color: cyan;
+            -webkit-user-select: none;
+            user-select: none;
         }
+
         canvas {
             display: block;
             box-shadow: 0 0 50px rgba(0, 255, 255, 0.1);
         }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            /* Let clicks pass to canvas */
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 10px cyan;
+        }
+
+        #shop-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid cyan;
+            color: cyan;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 0 10px cyan;
+        }
+
+        #shop-btn:hover {
+            background: rgba(0, 255, 255, 0.3);
+        }
+
+        #shop-modal {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid cyan;
+            padding: 20px;
+            width: 300px;
+            pointer-events: auto;
+            text-align: center;
+            box-shadow: 0 0 30px cyan;
+        }
+
+        .shop-item {
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .color-btn {
+            width: 30px;
+            height: 30px;
+            border: 2px solid white;
+            cursor: pointer;
+        }
+
+        .buy-btn {
+            background: #222;
+            border: 1px solid cyan;
+            color: cyan;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .buy-btn:disabled {
+            border-color: #555;
+            color: #555;
+            cursor: not-allowed;
+        }
     </style>
 </head>
+
 <body>
     <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <button id="shop-btn">SHOP</button>
+        <div id="hud">LOOT: <span id="loot-count">0</span></div>
+
+        <div id="shop-modal">
+            <h2>NEON SHOP</h2>
+            <div id="shop-items">
+                <!-- Items injected by JS -->
+            </div>
+            <br>
+            <button id="close-shop" class="buy-btn">CLOSE</button>
+        </div>
+    </div>
+
     <script src="game.js"></script>
 </body>
+
 </html>
