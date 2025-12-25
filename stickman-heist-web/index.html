@@ -130,6 +130,98 @@
             color: #444;
             cursor: not-allowed;
         }
+
+        /* Overlays */
+        #start-screen h1,
+        #game-over-screen h1,
+        #level-complete-screen h1 {
+            font-size: 60px;
+            margin: 0;
+            line-height: 0.9;
+            text-align: center;
+        }
+
+        #start-screen p,
+        #game-over-screen p,
+        #level-complete-screen p {
+            font-size: 20px;
+            letter-spacing: 5px;
+            color: #fff;
+            margin-bottom: 40px;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            z-index: 100;
+        }
+
+        /* Initial States */
+        #start-screen {
+            display: flex;
+        }
+
+        #game-over-screen {
+            display: none;
+        }
+
+        #level-complete-screen {
+            display: none;
+        }
+
+        .title-glitch {
+            text-shadow: 2px 2px 0px #f0f, -2px -2px 0px #0ff;
+            animation: glitch 1s infinite alternate;
+        }
+
+        @keyframes glitch {
+            0% {
+                text-shadow: 2px 2px 0px #f0f, -2px -2px 0px #0ff;
+            }
+
+            50% {
+                text-shadow: -2px -2px 0px #f0f, 2px 2px 0px #0ff;
+            }
+
+            100% {
+                text-shadow: 2px -2px 0px #f0f, -2px 2px 0px #0ff;
+            }
+        }
+
+        .hud-title {
+            text-shadow: 0 0 10px cyan;
+            margin-top: 0;
+        }
+
+        .danger-text {
+            color: red;
+            text-shadow: 0 0 20px red;
+        }
+
+        .success-text {
+            color: #0f0;
+            text-shadow: 0 0 20px #0f0;
+        }
+
+        .w-100 {
+            width: 100%;
+        }
+
+        .large-btn {
+            font-size: 24px;
+            padding: 15px 40px;
+        }
     </style>
 </head>
 
@@ -153,19 +245,19 @@
         </div>
 
         <!-- Overlays -->
-        <div id="start-screen" class="overlay" style="display:flex;">
+        <div id="start-screen" class="overlay">
             <h1 class="title-glitch">STICKMAN<br>HEIST</h1>
             <p>CLASS: THE GLITCH THIEF</p>
             <button id="start-btn" class="buy-btn large-btn">INITIALIZE SYSTEM</button>
         </div>
 
-        <div id="game-over-screen" class="overlay" style="display:none;">
+        <div id="game-over-screen" class="overlay">
             <h1 class="danger-text">CONNECTION LOST</h1>
             <p>SYSTEM FAILURE</p>
             <button id="retry-btn" class="buy-btn">REBOOT</button>
         </div>
 
-        <div id="level-complete-screen" class="overlay" style="display:none;">
+        <div id="level-complete-screen" class="overlay">
             <h1 class="success-text">UPLOAD COMPLETE</h1>
             <p>DATA SECURED</p>
             <button id="next-level-btn" class="buy-btn">ACCESS NEXT NODE</button>
